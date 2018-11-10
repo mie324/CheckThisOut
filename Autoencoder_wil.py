@@ -20,6 +20,10 @@ import torchtext
 from torchtext import data
 import spacy
 import numpy as np
+import pandas as pd
+
+dataset = pd.read_csv("./data/abstracts400.csv")
+
 
 
 # Define Tokenizer
@@ -33,17 +37,12 @@ def tokenizer(text): # create a tokenizer function
 
 def main():
     # Build Vocab
-    text = data.Field(sequential=True, tokenize="spacy", include_lengths=True)
-    label = data.Field(sequential=False, use_vocab=False)
-    train_data = data.TabularDataset(path='./data/train.tsv', skip_header=True, format='tsv',
-                                     fields=[('text', text), ('label', label)])
-    text.build_vocab(train_data)
-    vocab = text.vocab
-
-    # Get Models
-    baseline_model = torch.load('model_baseline.pt')
-    rnn_model = torch.load('model_rnn.pt')
-    cnn_model = torch.load('model_cnn.pt')
+    abstract = data.Field(sequential=True, tokenize="spacy", include_lengths=True)
+    name = data.Field(sequential=False, use_vocab=False)
+    abstract_data = data.TabularDataset(path='./data/abstracts400.tsv', skip_header=False, format='tsv',
+                                     fields=[('name', name), ('abstract', abstract)])
+    abstract.build_vocab(abstract_data)
+    vocab = abstract.vocab
 
     while True:
 
