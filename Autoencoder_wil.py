@@ -39,13 +39,17 @@ def main():
     # Build Vocab
     abstract = data.Field(sequential=True, tokenize="spacy", include_lengths=True)
     name = data.Field(sequential=False, use_vocab=False)
-    abstract_data = data.TabularDataset(path='./data/abstract_tsv.tsv', skip_header=False, format='tsv',
+    abstract_data = data.TabularDataset(path='./data/abstract_tsv.tsv', skip_header=True, format='tsv',
                                      fields=[('name', name), ('abstract', abstract)])
     abstract.build_vocab(abstract_data)
     vocab = abstract.vocab
     abstract_iter = data.BucketIterator(abstract_data, batch_size=10 ,sort_key=lambda x: len(x.abstract),sort_within_batch=True, repeat=False)
     for i, abs in enumerate(abstract_iter):
         feature,length = abs.abstract
+
+# this is giving me error: invalid literal for int() with base 10: '' or RuntimeError: sizes must be non-negative based on the batch size
+
+
 
 
     # while True:
