@@ -43,9 +43,10 @@ def main():
                                      fields=[('name', name), ('abstract', abstract)])
     abstract.build_vocab(abstract_data)
     vocab = abstract.vocab
-    abstract_iter = data.BucketIterator(abstract_data, batch_size=32 ,sort_key=lambda x: len(x.abstract),sort_within_batch=True, repeat=False)
-    for abs in abstract_iter:
-        feature = abs.abstract
+    abstract_iter = data.BucketIterator(abstract_data, batch_size=10 ,sort_key=lambda x: len(x.abstract),sort_within_batch=True, repeat=False)
+    for i, abs in enumerate(abstract_iter):
+        feature,length = abs.abstract
+
 
     # while True:
     #
