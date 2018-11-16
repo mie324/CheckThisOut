@@ -1,0 +1,53 @@
+import pandas as pd
+import torch
+import numpy as np
+
+# data = pd.read_csv("./data/steam_trimmed.csv")
+# col = ["UserID", "Game", "Hours"]
+# toberemoved = []
+# tobeleftin = []
+#
+# j = 0
+# while j < len(data[col[0]]):
+#     id = data[col[0]][j]
+#     numofgames = (data['UserID'] == id).sum()
+#     if numofgames < 10:
+#         toberemoved.append(id)
+#     else:
+#         tobeleftin.append(id)
+#     j += numofgames
+# print(len(tobeleftin), len(toberemoved))
+# for i in toberemoved:
+#     data = data[data['UserID'] != i]
+# data.to_csv('./data/trimmed.csv', index=False)
+
+
+# data = pd.read_csv("./data/trimmed10.csv")
+# col = ["UserID", "Game", "Hours"]
+# # currid = 0
+# listofids = data["UserID"].unique()
+# # finalset = [["game1","hours1"],["game2","hours2"],["game3","hours3"],["game4","hours4"],["game5","hours5"],["game6","hours6"],["game7","hours7"],["game8","hours8"],["game9","hours9"],["game10","hours10"],["game11","hours11"]]
+# # finalset = np.array(finalset)
+# finalset = []
+# j = 0
+# for i,id in enumerate(listofids): #there are 1477 players with more than 10 games played on record # and 9873 players with less
+#     theirgames = []
+#     while data[col[0]][j] == id:
+#         theirgames.append([data[col[1]][j],data[col[2]][j]])
+#         j += 1
+#         if j == len(data[col[0]]):
+#             break
+#     theirgames.sort(key=lambda x: x[1],reverse=True)
+#     theirtopgames = np.array(theirgames[:11])
+#     for k in range(11):
+#         finalset.append(np.roll(theirtopgames, k, axis=0).tolist())
+#     if j == len(data[col[0]]):
+#         break
+#
+# finalset=np.array(finalset)
+# np.save("./data/tophours10.npy", finalset)
+
+hours = np.load("./data/tophours10.npy")
+print(type(hours))
+
+
