@@ -2,6 +2,7 @@ import pandas as pd
 import torch
 import numpy as np
 
+# # Trimm the data t
 # data = pd.read_csv("./data/steam_trimmed.csv")
 # col = ["UserID", "Game", "Hours"]
 # toberemoved = []
@@ -48,6 +49,8 @@ import numpy as np
 # np.save("./data/tophours10.npy", finalset)
 
 hours = np.load("./data/tophours10.npy")
-print(type(hours))
+for i in hours:
+    print(i)
+
 
 
