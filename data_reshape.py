@@ -2,8 +2,8 @@ import pandas as pd
 import torch
 import numpy as np
 
-# # Trimm the data t
-# data = pd.read_csv("./data/steam_trimmed.csv")
+# Trimm the data to only include players with at least 11 games
+# data = pd.read_csv("./data/steam_removedtype.csv")
 # col = ["UserID", "Game", "Hours"]
 # toberemoved = []
 # tobeleftin = []
@@ -12,7 +12,7 @@ import numpy as np
 # while j < len(data[col[0]]):
 #     id = data[col[0]][j]
 #     numofgames = (data['UserID'] == id).sum()
-#     if numofgames < 10:
+#     if numofgames < 11:
 #         toberemoved.append(id)
 #     else:
 #         tobeleftin.append(id)
@@ -23,7 +23,9 @@ import numpy as np
 # data.to_csv('./data/trimmed.csv', index=False)
 
 
-# data = pd.read_csv("./data/trimmed10.csv")
+# # This block is for reshaping the trimmed data into the form of:
+# # every row being 11 entries representing 1 players top 11 games
+# data = pd.read_csv("./data/trimmed.csv")
 # col = ["UserID", "Game", "Hours"]
 # # currid = 0
 # listofids = data["UserID"].unique()
@@ -32,7 +34,7 @@ import numpy as np
 # finalset = []
 # j = 0
 # for i,id in enumerate(listofids): #there are 1477 players with more than 10 games played on record # and 9873 players with less
-#     theirgames = []
+#     theirgames = []               #there are 1372 players with more than 10 games played on record # and 9978 players with less
 #     while data[col[0]][j] == id:
 #         theirgames.append([data[col[1]][j],data[col[2]][j]])
 #         j += 1
@@ -46,11 +48,12 @@ import numpy as np
 #         break
 #
 # finalset=np.array(finalset)
-# np.save("./data/tophours10.npy", finalset)
+# np.save("./data/tophours11.npy", finalset)
 
-hours = np.load("./data/tophours10.npy")
-for i in hours:
-    print(i)
+hours = np.load("./data/tophours11.npy")
+print(hours.shape)
+# for i in hours:
+#     print(i)
 
 
 
