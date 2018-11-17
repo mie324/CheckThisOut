@@ -11,7 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-
+# this block of code is for the mlp version of the model
 class Autoencoder(torch.nn.Module):
     def __init__(self):
         super(Autoencoder,self).__init__()
@@ -65,11 +65,15 @@ class full_mlp(torch.nn.Module):
         input_to_next=torch.cat((abstract_for_decision,input2),0)
         ans=self.decision_net.forward(input_to_next)
         return ans
+
+
+
+# this block of code is for the cnn version of model
 class CNN(torch.nn.Module):
     def __init__(self):
         super(CNN,self).__init__()
         self.conv1=nn.Sequential(nn.Conv1d(100,10,5),nn.Sigmoid())
-        self.fc1=nn.Linear(1460,1)
+        self.fc1=nn.Linear(1460,50)
 
     def forward(self,input):
         x=self.conv1(input)
@@ -78,4 +82,38 @@ class CNN(torch.nn.Module):
         #print(len(x[0]))
         x=self.fc1(x[0])
         return x
+
+class Decision_maker_for_cnn(torch.nn.Module):
+    def __init__(self):
+        super(Decision_maker_for_cnn,self).__init__()
+        self.fc1=nn.Sequential(nn.Linear(50*11+10,100),nn.Sigmoid())
+        self.fc2=nn.Sequential(nn.Linear(100,1),nn.Sigmoid())
+
+    def forward(self,input):
+        x=self.fc1(input)
+        x=self.fc2(x)
+        return x
+
+class full_cnn(torch.nn.Module):
+    def __init__(self):
+        super(full_cnn,self).__init__()
+        self.cnn_list = []
+        for i in range(11):
+            temp_net = CNN()
+            self.cnn_list.append(temp_net)
+        self.decision_net=Decision_maker_for_cnn()
+
+    def forward(self,input1,input2):
+        #input1 to this function should be a "list", but in the list, each element is a 1*100*150 variable
+        #input2 should be a Variable which has a size of 10*1, which contain the number of hour that the player has been playing
+        # in the top 10 games.
+        into_decision = self.cnn_list[0].forward(input1[0])
+        for i in range(1, 11):
+            temp = self.cnn_list[i].forward(input1[i])
+            into_decision = torch.cat((into_decision, temp), 0)
+
+        into_decision=torch.cat((into_decision,input2),0)
+        ans=self.decision_net.forward(into_decision)
+        return ans
+
 
