@@ -32,3 +32,18 @@ class Autoencoder(torch.nn.Module):
         #x = self.layer5(x)
         x = self.layer6(x)
         return x, encoded
+
+
+class CNN(torch.nn.Module):
+    def __init__(self):
+        super(CNN,self).__init__()
+        self.conv1=nn.Sequential(nn.Conv1d(100,10,5),nn.Sigmoid())
+        self.fc1=nn.Linear(1460,1)
+
+    def forward(self,input):
+        x=self.conv1(input)
+        x=x.view(-1,len(x)*len(x[0]))
+        x=x.view(-1,len(x)*len(x[0]))
+        #print(len(x[0]))
+        x=self.fc1(x[0])
+        return x
