@@ -47,3 +47,26 @@ class CNN(torch.nn.Module):
         #print(len(x[0]))
         x=self.fc1(x[0])
         return x
+
+class RNN(nn.Module):
+    def __init__(self, embedding_dim, vocab, hidden_dim):
+        super(RNN, self).__init__()
+        ######
+        # 4.2 YOUR CODE HERE
+        self.embedding = nn.Embedding.from_pretrained(vocab.vectors)
+        self.GRU = nn.GRU(embedding_dim,hidden_size=hidden_dim)
+        self.linear1 = nn.Linear(embedding_dim,1)
+
+
+
+    def forward(self, x, lengths=None):
+
+        ######
+        # 4.2 YOUR CODE HERE
+        x = self.embedding(x)
+        x = nn.utils.rnn.pack_padded_sequence(x,lengths)
+        _, x = self.GRU(x)
+        x = self.linear1(x)
+        x = torch.sigmoid(x)
+        return x
+
