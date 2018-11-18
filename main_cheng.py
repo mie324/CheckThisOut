@@ -299,28 +299,25 @@ def run_cnn_complete_version():
             accuracy_in_batch=0
             for k in range(batch_size):
                 # to access the correct data, use (batch_num*batch_size+k)
-                if check_in_diction(abstract_dictionary,train_data[batch_num*batch_size+k]):
-                    abstract_list,hour_list,label=convert_data_cnn(train_data[batch_num*batch_size+k],Vocab,embeds,abstract_dictionary)
-                    prediction=net.forward(abstract_list,hour_list)
-                    loss=loss_func(prediction,label)
-                    #print(prediction,label)
-                    loss_in_batch+=loss
-                    count_in_batch+=1
-                    accuracy_in_batch+=correctness_cnn(prediction,label,tollerancec)
+                abstract_list,hour_list,label=convert_data_cnn(train_data[batch_num*batch_size+k],Vocab,embeds,abstract_dictionary)
+                prediction=net.forward(abstract_list,hour_list)
+                loss=loss_func(prediction,label)
+                #print(prediction,label)
+                loss_in_batch+=loss
+                count_in_batch+=1
+                accuracy_in_batch+=correctness_cnn(prediction,label,tollerancec)
 
                 #print('current batch:'+str(batch_num)+', k:'+str(k))
-            if count_in_batch!=0:
-                loss_in_batch=loss_in_batch/count_in_batch
-                accuracy_in_batch=accuracy_in_batch/count_in_batch
+            loss_in_batch=loss_in_batch/count_in_batch
+            accuracy_in_batch=accuracy_in_batch/count_in_batch
 
-                optimizer.zero_grad()
-                loss_in_batch.backward()
-                optimizer.step()
+            optimizer.zero_grad()
+            loss_in_batch.backward()
+            optimizer.step()
 
-                #count+=1
-                #if count%20==0:
-                print(count_in_batch)
-                print('epoch:'+str(epoch_num)+', batch:'+str(batch_num)+', loss:'+str(loss_in_batch)+', accuraccy:'+str(accuracy_in_batch))
+            #count+=1
+            #if count%20==0:
+            print('epoch:'+str(epoch_num)+', batch:'+str(batch_num)+', loss:'+str(loss_in_batch)+', accuraccy:'+str(accuracy_in_batch))
 
 
 

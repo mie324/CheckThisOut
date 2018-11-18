@@ -19,10 +19,10 @@ from model import *
 import math
 
 def split_data():
-    file=np.load("./data/playedhours_final.npy").tolist()
+    file=np.load("./data/playedhours_finalv2.npy").tolist()
     #print(len(file))
-    end_train=12074
-    end_val=12074+1509
+    end_train=8087
+    end_val=9098
     end_test=len(file)
     train_data=[]
     val_data=[]
