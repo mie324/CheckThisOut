@@ -263,7 +263,7 @@ def correctness_cnn(prediction,label,range):
 
 def run_cnn_complete_version():
 
-    learning_rate=0.001
+    learning_rate=0.0001
     batch_size=50
     epoch=2
     tollerancec=10

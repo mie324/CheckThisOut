@@ -72,16 +72,17 @@ class full_mlp(torch.nn.Module):
 class CNN(torch.nn.Module):
     def __init__(self,kernel_size):
         super(CNN,self).__init__()
-        self.kernel_num=10
+        self.kernel_num=50
         #self.conv1=nn.Sequential(nn.Conv1d(100,self.kernel_num,kernel_size),nn.Sigmoid())
         self.conv1=nn.Conv1d(100,self.kernel_num,kernel_size)
+        #self.pooling=nn.MaxPool1d(30)
         self.fc1=nn.Linear((150-(kernel_size-1))*self.kernel_num,50)
 
     def forward(self,input):
         x=self.conv1(input)
+        #x=self.pooling(x)
         x=x.view(-1,len(x)*len(x[0]))
         x=x.view(-1,len(x)*len(x[0]))
-        #print(len(x[0]))
         x=self.fc1(x[0])
         return x
 
