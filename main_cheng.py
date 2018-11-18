@@ -1,5 +1,6 @@
 import torch
 import numpy
+import numpy as np
 import pandas as pd
 
 import torchtext
@@ -12,23 +13,26 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 import timeit
+from sklearn.model_selection import train_test_split
 
 from model import *
 import math
-#from cnn_model import *
+from process_data_cheng import *
 
 spacy_en = spacy.load('en')
+
 
 def convert_csv_to_tsv(file,new_name):
     # given the "abstract file with 400 abstracts" in the form of csv, it converts the file into tsv, with 400 entries
     file=pd.read_csv(file)
     file=file.values.tolist()
     version_400=[]
-    for i in range(400):
+    for i in range(len(file)):
         version_400.append(file[i])
     file=pd.DataFrame(file)
     file.columns = ['text', 'label']
     file.to_csv(new_name,sep='\t',index=False)
+
 
 def read_tsv(file):
     # this file reads a tsv file and convert it into list.
@@ -163,7 +167,7 @@ def main():
 def run_fullyconnect_complete_version():
     TEXT = data.Field(sequential=True, include_lengths=True, tokenize='spacy')
     LABEL = data.Field(sequential=False, use_vocab=False)
-    abstract_data = data.TabularDataset(path='./data/abstract_tsv.tsv', skip_header=True, format='tsv',
+    abstract_data = data.TabularDataset(path='./data/full_abstract_tsv.tsv', skip_header=True, format='tsv',
                                         fields=[('text', TEXT), ('label', LABEL)])
     TEXT.build_vocab(abstract_data)
     Vocab = TEXT.vocab
@@ -224,42 +228,119 @@ def sentence_preprocess_cnn(sentence,Vocab,embeds):
     return ans
 
 
+def convert_data_cnn(data,Vocab,embeds,dictionary):
+    # this function take in a data point, and convert the data point into
+    # sentence list, hour list, label in the form that can be used directly by the full_cnn model.
+    sentence_list=[]
+    for i in range(len(data)):
+        tsentence=dictionary[data[i][0]]
+        tsentence=sentence_preprocess_cnn(tsentence,Vocab,embeds)
+        sentence_list.append(tsentence)
+    hour_list=[]
+    for i in range(10):
+        hour_list.append(float(data[i][1]))
+    hour_list=Variable(torch.tensor(hour_list).float())
+    label=Variable(torch.tensor(float(data[-1][1])).float())
+    return sentence_list,hour_list,label
+
+def check_in_diction(dictionary,data):
+    count=0
+    for i in range(len(data)):
+        if data[i][0] in dictionary.keys():
+            count+=1
+    if count==11:
+        return True
+    if count!=11:
+        return False
+
+def correctness_cnn(prediction,label,range):
+    lower=label-range
+    higher=label+range
+    if prediction<=higher and prediction>=lower:
+        return 1
+    else:
+        return 0
+
 def run_cnn_complete_version():
+
+    learning_rate=0.001
+    batch_size=50
+    epoch=2
+    tollerancec=10
+
+
+    print('program start')
+    print('start loading nlp tools')
     TEXT = data.Field(sequential=True, include_lengths=True, tokenize='spacy')
     LABEL = data.Field(sequential=False, use_vocab=False)
-    abstract_data = data.TabularDataset(path='./data/abstract_tsv.tsv', skip_header=True, format='tsv',
+    abstract_data = data.TabularDataset(path='./data/full_abstract_tsv.tsv', skip_header=True, format='tsv',
                                         fields=[('text', TEXT), ('label', LABEL)])
     TEXT.build_vocab(abstract_data)
     Vocab = TEXT.vocab
     Vocab.load_vectors(torchtext.vocab.GloVe(name='6B', dim=100))
     embeds = nn.Embedding.from_pretrained(Vocab.vectors)
+    print('finished loading nlp tools')
+
+    train_data, validation_data, test_data = split_data()
+    print('finished loading data')
+
+    abstract_dictionary=convert_csv_to_dict('./data/abstracts_final.csv')
+    print('finished loading dictionary')
+
+    net=full_cnn()
+    optimizer=torch.optim.RMSprop(net.parameters(),lr=learning_rate)
+    loss_func=torch.nn.MSELoss()
+
+    for epoch_num in range(epoch):
+        count=0
+        for batch_num in range(int(len(train_data)/batch_size)):
+            loss_in_batch=0
+            count_in_batch=0
+            accuracy_in_batch=0
+            for k in range(batch_size):
+                # to access the correct data, use (batch_num*batch_size+k)
+                if check_in_diction(abstract_dictionary,train_data[batch_num*batch_size+k]):
+                    abstract_list,hour_list,label=convert_data_cnn(train_data[batch_num*batch_size+k],Vocab,embeds,abstract_dictionary)
+                    prediction=net.forward(abstract_list,hour_list)
+                    loss=loss_func(prediction,label)
+                    #print(prediction,label)
+                    loss_in_batch+=loss
+                    count_in_batch+=1
+                    accuracy_in_batch+=correctness_cnn(prediction,label,tollerancec)
+
+                #print('current batch:'+str(batch_num)+', k:'+str(k))
+            if count_in_batch!=0:
+                loss_in_batch=loss_in_batch/count_in_batch
+                accuracy_in_batch=accuracy_in_batch/count_in_batch
+
+                optimizer.zero_grad()
+                loss_in_batch.backward()
+                optimizer.step()
+
+                #count+=1
+                #if count%20==0:
+                print(count_in_batch)
+                print('epoch:'+str(epoch_num)+', batch:'+str(batch_num)+', loss:'+str(loss_in_batch)+', accuraccy:'+str(accuracy_in_batch))
 
 
-    # this  part is testing if the cnn version of the complete model works.
 
-    # creating an input1 for test
-    file = read_tsv('./data/abstract_tsv.tsv')
-    sentence_list=[]# the size of this list is 11*1*100*150
-    for i in range(11):
-        tsentence=file[i][0]
-        tsentence=sentence_preprocess_cnn(tsentence,Vocab,embeds)
-        sentence_list.append(tsentence)
-
-    # creating an input2 for test
-    temp_hours=Variable(torch.tensor([10,20,90,12,42,5,61,65,19,29]).float())
-
-    # testing the complete model
-    full_model_cnn=full_cnn()
-    ans=full_model_cnn.forward(sentence_list,temp_hours)
-    print(ans)
 
 
 if __name__=='__main__':
-    #abstracts=convert_csv_to_tsv('./data/abstracts500c.csv','./data/abstract_tsv.tsv')
+    #convert_csv_to_tsv('./data/abstracts_final_for_vocab.csv','./data/full_abstract_tsv.tsv')
     #file=read_tsv('./data/abstract_tsv.tsv')
     #main()
     #run_fullyconnect_complete_version()
+    #run_cnn_complete_version()
+    #ans=convert_csv_to_dict('./data/abstracts_final.csv')
     run_cnn_complete_version()
+
+
+
+
+
+
+
 
 
 
