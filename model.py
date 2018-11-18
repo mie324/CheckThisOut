@@ -86,8 +86,8 @@ class CNN(torch.nn.Module):
 class Decision_maker_for_cnn(torch.nn.Module):
     def __init__(self):
         super(Decision_maker_for_cnn,self).__init__()
-        self.fc1=nn.Sequential(nn.Linear(50*11+10,100),nn.Sigmoid())
-        self.fc2=nn.Sequential(nn.Linear(100,1),nn.Sigmoid())
+        self.fc1=nn.Linear(50*11+10,100)
+        self.fc2=nn.Sequential(nn.Linear(100,1),nn.Relu())
 
     def forward(self,input):
         x=self.fc1(input)
