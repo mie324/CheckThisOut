@@ -235,13 +235,22 @@ def run_cnn_complete_version():
     embeds = nn.Embedding.from_pretrained(Vocab.vectors)
 
 
-    file = read_tsv('./data/abstract_tsv.tsv')
-    tsentence=file[0][0]
-    tsentence=sentence_preprocess_cnn(tsentence,Vocab,embeds)
+    # this  part is testing if the cnn version of the complete model works.
 
-    #from this point, we start testing for the cnn model.
-    cnn_test=CNN()
-    ans=cnn_test(tsentence)
+    # creating an input1 for test
+    file = read_tsv('./data/abstract_tsv.tsv')
+    sentence_list=[]# the size of this list is 11*1*100*150
+    for i in range(11):
+        tsentence=file[i][0]
+        tsentence=sentence_preprocess_cnn(tsentence,Vocab,embeds)
+        sentence_list.append(tsentence)
+
+    # creating an input2 for test
+    temp_hours=Variable(torch.tensor([10,20,90,12,42,5,61,65,19,29]).float())
+
+    # testing the complete model
+    full_model_cnn=full_cnn()
+    ans=full_model_cnn.forward(sentence_list,temp_hours)
     print(ans)
 
 
