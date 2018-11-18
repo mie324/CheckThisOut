@@ -70,10 +70,12 @@ class full_mlp(torch.nn.Module):
 
 # this block of code is for the cnn version of model
 class CNN(torch.nn.Module):
-    def __init__(self):
+    def __init__(self,kernel_size):
         super(CNN,self).__init__()
-        self.conv1=nn.Sequential(nn.Conv1d(100,10,5),nn.Sigmoid())
-        self.fc1=nn.Linear(1460,50)
+        self.kernel_num=10
+        #self.conv1=nn.Sequential(nn.Conv1d(100,self.kernel_num,kernel_size),nn.Sigmoid())
+        self.conv1=nn.Conv1d(100,self.kernel_num,kernel_size)
+        self.fc1=nn.Linear((150-(kernel_size-1))*self.kernel_num,50)
 
     def forward(self,input):
         x=self.conv1(input)
@@ -86,8 +88,8 @@ class CNN(torch.nn.Module):
 class Decision_maker_for_cnn(torch.nn.Module):
     def __init__(self):
         super(Decision_maker_for_cnn,self).__init__()
-        self.fc1=nn.Sequential(nn.Linear(50*11+10,100),nn.Sigmoid())
-        self.fc2=nn.Sequential(nn.Linear(100,1),nn.Sigmoid())
+        self.fc1=nn.Linear(50*11+10,100)
+        self.fc2=nn.Sequential(nn.Linear(100,1),nn.ReLU())
 
     def forward(self,input):
         x=self.fc1(input)
@@ -97,9 +99,10 @@ class Decision_maker_for_cnn(torch.nn.Module):
 class full_cnn(torch.nn.Module):
     def __init__(self):
         super(full_cnn,self).__init__()
+        self.kernel_size=100
         self.cnn_list = []
         for i in range(11):
-            temp_net = CNN()
+            temp_net = CNN(self.kernel_size)
             self.cnn_list.append(temp_net)
         self.decision_net=Decision_maker_for_cnn()
 
