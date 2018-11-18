@@ -94,6 +94,7 @@ class Decision_maker_for_cnn(torch.nn.Module):
         x=self.fc2(x)
         return x
 
+
 class full_cnn(torch.nn.Module):
     def __init__(self):
         super(full_cnn,self).__init__()
@@ -122,22 +123,37 @@ class full_cnn(torch.nn.Module):
 class RNN(nn.Module):
     def __init__(self, embedding_dim, vocab, hidden_dim):
         super(RNN, self).__init__()
-        ######
-        # 4.2 YOUR CODE HERE
         self.embedding = nn.Embedding.from_pretrained(vocab.vectors)
         self.GRU = nn.GRU(embedding_dim,hidden_size=hidden_dim)
-        self.linear1 = nn.Linear(embedding_dim,1)
+
+    def forward(self, x, lengths=None):
+        x = self.embedding(x)
+        x = x.unsqueeze(1)
+        # x = nn.utils.rnn.pack_padded_sequence(x,lengths)
+        _, x = self.GRU(x)
+        return x
 
 
+class full_rnn(nn.Module):
+    def __init__(self, embedding_dim, vocab, hidden_dim):
+        super().__init__()
+        self.RNNs = []
+        for i in range(11):
+            temp = RNN(embedding_dim,vocab,hidden_dim)
+            self.RNNs.append(temp.cuda())
+        self.decision_net = Decision_maker_for_cnn()
+        # self.nameindex = [0,2,4,6,8,10,12,14,16,18,20]
+        # self.hoursindex = [1,3,5,7,9,11,13,15,17,19]
 
     def forward(self, x, lengths=None):
 
-        ######
-        # 4.2 YOUR CODE HERE
-        x = self.embedding(x)
-        x = nn.utils.rnn.pack_padded_sequence(x,lengths)
-        _, x = self.GRU(x)
-        x = self.linear1(x)
-        x = torch.sigmoid(x)
-        return x
+        into_decision = self.RNNs[0].forward(x[0].long())
+        for i in range(1, 11):
+            temp = self.RNNs[i].forward(x[i].long())
+            into_decision = torch.cat((into_decision, temp), 0)
+        into_decision = into_decision.squeeze().reshape(-1)
+        for j in range(11,21):
+            into_decision = torch.cat((into_decision, torch.tensor([float(x[j])]).cuda()), 0)
+        ans = self.decision_net.forward(into_decision.squeeze())
+        return ans
 
