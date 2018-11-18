@@ -17,7 +17,7 @@ from torch.autograd import Variable
 seed = 1
 
 # abstractset = pd.read_csv("./data/abstracts_final.csv")
-playedhours = np.load("./data/playedhours_final.npy")
+playedhours = np.load("./data/playedhours_finalv2.npy")
 feat_train, feat_temp, discard1, discard2 = train_test_split(playedhours, np.zeros((len(playedhours),1)), test_size=0.2, random_state=seed)
 feat_valid, feat_test, discard1, discard2 = train_test_split(feat_temp, np.zeros((len(feat_temp),1)), test_size=0.5, random_state=seed)
 
@@ -189,17 +189,17 @@ def main(args):
 
                 features, labels = train_set.__getitem__(i*batch_size+j)
                 optimizer.zero_grad()
-                if check_in_diction(get_abs, features):
+                # if check_in_diction(get_abs, features):
 
-                    absfeatures = []
-                    for l in nameindex:
-                        absfeatures.append(sentence_preprocess_rnn(get_abs[features[l]], abstract.vocab).cuda())
-                    for k in hoursindex:
-                        absfeatures.append(torch.tensor(float(features[k])).cuda())
-                    predict = model(absfeatures)
-                    predict_batch = torch.cat((predict_batch, predict), 0)
-                    labels_batch = torch.cat((labels_batch, torch.tensor([float(labels)]).cuda()), 0)
-                    corr += correctness(predict,torch.tensor([float(labels)]).cuda(),tolerance)
+                absfeatures = []
+                for l in nameindex:
+                    absfeatures.append(sentence_preprocess_rnn(get_abs[features[l]], abstract.vocab).cuda())
+                for k in hoursindex:
+                    absfeatures.append(torch.tensor(float(features[k])).cuda())
+                predict = model(absfeatures)
+                predict_batch = torch.cat((predict_batch, predict), 0)
+                labels_batch = torch.cat((labels_batch, torch.tensor([float(labels)]).cuda()), 0)
+                corr += correctness(predict,torch.tensor([float(labels)]).cuda(),tolerance)
 
             loss = loss_func(predict_batch,labels_batch)
             loss.backward()
@@ -228,8 +228,8 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=40)
-    parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--lr', type=float, default=0.01)
     parser.add_argument('--epochs', type=int, default=25)
     parser.add_argument('--model', type=str, default='baseline',
                         help="Model type: baseline,rnn,cnn (Default: baseline)")
