@@ -294,7 +294,7 @@ def correctness_cnn(prediction,label):
     if max_position!=one_position:
         return 0
 
-#ddd
+#dddd
 
 def run_cnn_complete_version():
 
