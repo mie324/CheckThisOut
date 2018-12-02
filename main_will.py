@@ -14,10 +14,10 @@ from torch.utils.data import DataLoader
 from dataset import HoursDataset
 from sklearn.model_selection import train_test_split
 from torch.autograd import Variable
-seed = 1
+seed = 12315
 
 # abstractset = pd.read_csv("./data/abstracts_final.csv")
-playedhours = np.load("./data/playedhours_finalv2.npy")
+playedhours = np.load("./data/tophours11.npy")
 feat_train, feat_temp, discard1, discard2 = train_test_split(playedhours, np.zeros((len(playedhours),1)), test_size=0.2, random_state=seed)
 feat_valid, feat_test, discard1, discard2 = train_test_split(feat_temp, np.zeros((len(feat_temp),1)), test_size=0.5, random_state=seed)
 
@@ -66,29 +66,33 @@ def sentence_preprocess_rnn(sentence,Vocab):
 
 
 
-def evaluate(model, valiter, loss_func):
-    total_corr = 0
-    total_loss = 0
-    total_entries = 0
+def evaluate(model, valset, vocab, dict):
+    valcorr = 0
+    nameindex = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+    # predict_all = torch.Tensor([]).cuda()
+    # labels_all = torch.Tensor([]).float().cuda()
+    numofval = 100
+    # numofval = len(valset)
+    for j in range(numofval):
 
-    for j, entry in enumerate(valiter):
+        features, labels = valset.__getitem__(j)
+        absfeatures = []
+        for l in nameindex:
+            absfeatures.append(sentence_preprocess_rnn(dict[features[l]], vocab).cuda())
+        for k in range(50):
+            if k not in nameindex:
+                absfeatures.append(torch.tensor(float(features[k])).cuda())
+        predict = model(absfeatures)
+        # predict_all = torch.cat((predict_all, predict), 0)
+        # labels_all = torch.cat((labels_all, torch.tensor(labels.astype(float)).float().cuda()), 0)
+        valcorr += correctness(predict, torch.tensor([labels.astype(float)]).cuda())
 
-        (features, length) = entry.text
-        label = entry.Label
-        val_outputs = model(features, length) # hypothetically this is batchsize x 26
-        corr = (val_outputs > 0.5).squeeze().long() == label.squeeze()
-        loss = loss_func(val_outputs.squeeze().float(), label.squeeze().float())
-
-        total_entries += length.shape[0]
-        total_loss += loss.item()
-        total_corr += int(corr.sum())
-
-    return float(total_corr)/total_entries, float(total_loss)/(j+1)
+    return float(valcorr)/numofval
 
 def load_model(lr, vocab, embsize, hiddennum):
 
     model = full_rnn(embsize, vocab, hiddennum)
-    loss_fnc = torch.nn.MSELoss()
+    loss_fnc = torch.nn.BCELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     return model, loss_fnc, optimizer
@@ -121,10 +125,16 @@ def check_in_diction(dictionary,data):
     if count!=11:
         return False
 
-def correctness(prediction,label,tolerance):
+def oldcorrectness(prediction,label,tolerance):
     lower=label-tolerance
     higher=label+tolerance
     if prediction<=higher and prediction>=lower:
+        return 1
+    else:
+        return 0
+def correctness(prediction,label):
+
+    if prediction.argmax()==label.argmax():
         return 1
     else:
         return 0
@@ -137,11 +147,11 @@ def main(args):
     lear_r = args.lr
     stepsize = 10
     embdim = args.emb_dim
-    modeltype = args.model
+    # modeltype = args.model
     rnn_hidden_dim = args.rnn_hidden_dim
-    n_kernals = args.num_filt
+    # n_kernals = args.num_filt
     get_abs = convert_csv_to_dict("./data/abstracts_final.csv")
-    tolerance = 10
+    # tolerance = 10
 
     # Build Vocab
     abstract = data.Field(sequential=True, tokenize="spacy", include_lengths=True)
@@ -168,23 +178,21 @@ def main(args):
 
     time_elap = []
     start_time = time()
+    time_now = time()
     currmaxaccu = 0.0  # for saving model
 
 
     train_set, val_set, test_set = load_data()
-    nameindex = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
-    hoursindex = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19]
-
+    nameindex = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
 
     batch_num = int(len(feat_train)/batch_size)
-
     corr = 0
     epoch = 0
     for epoch in range(maxepoch):
 
         for i in range(batch_num):
             predict_batch = torch.Tensor([]).cuda()
-            labels_batch = torch.Tensor([]).cuda()
+            labels_batch = torch.Tensor([]).float().cuda()
             for j in range(batch_size):
 
                 features, labels = train_set.__getitem__(i*batch_size+j)
@@ -194,20 +202,19 @@ def main(args):
                 absfeatures = []
                 for l in nameindex:
                     absfeatures.append(sentence_preprocess_rnn(get_abs[features[l]], abstract.vocab).cuda())
-                for k in hoursindex:
-                    absfeatures.append(torch.tensor(float(features[k])).cuda())
+                for k in range(50):
+                    if k not in nameindex:
+                        absfeatures.append(torch.tensor(float(features[k])).cuda())
                 predict = model(absfeatures)
                 predict_batch = torch.cat((predict_batch, predict), 0)
-                labels_batch = torch.cat((labels_batch, torch.tensor([float(labels)]).cuda()), 0)
-                corr += correctness(predict,torch.tensor([float(labels)]).cuda(),tolerance)
+                labels_batch = torch.cat((labels_batch, torch.tensor(labels.astype(float)).float().cuda()), 0)
+                corr += correctness(predict, torch.tensor([labels.astype(float)]).cuda())
 
-            loss = loss_func(predict_batch,labels_batch)
+            loss = loss_func(predict_batch, labels_batch)
             loss.backward()
             optimizer.step()
 
-            # val_ac, val_los = evaluate(model, val_iter, loss_func)
-            # val_accu.append(val_ac)
-            # val_loss.append(val_los)
+
 
             # if val_accu[-1] > currmaxaccu:
             #     torch.save(model, 'model_{}.pt'.format(modeltype))
@@ -215,28 +222,99 @@ def main(args):
 
             train_loss.append(loss.item())
             train_accu.append(corr / batch_size)
-            print('[Epoch #%d,Step #%d] | Training Loss: %.9f | Correct Predictions: %d | Training Accuracy: %f' % (epoch + 1, i, train_loss[-1], corr, train_accu[-1]))
+
+            prev_time = time_now
+            time_now = time()
+            time_elap.append(time_now - prev_time)
+            print('[Epoch #%d,Step #%d] | Training Loss: %.9f | Correct Predictions: %d | Training Accuracy: %f | Time Elapsed: %f | Step Time: %f' % (epoch + 1, i, train_loss[-1], corr, train_accu[-1],time_now-start_time,time_elap[-1]))
             corr = 0
             # total_train_num = 0
-            # time_elap.append(time() - start_time)
+
+            if i % 30 == 29:
+                val_ac = evaluate(model, val_set, abstract.vocab, get_abs)
+                val_accu.append(val_ac)
+                print('Validation Accuracy: {}'.format(val_ac))
+                torch.save(model, 'model_{}.pt'.format(val_ac))
+                # currmaxaccu = val_accu[-1]
+
+
+def run_test():
+    conf_mat = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]]
+    conf_mat = torch.tensor(conf_mat).cuda()
+    train_set, val_set, test_set = load_data()
+    model = torch.load("shuffledmodel_0.52.pt")
+
+    testcorr = 0
+    nameindex = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+    numofval = len(test_set)
+
+    abstract = data.Field(sequential=True, tokenize="spacy", include_lengths=True)
+    fakelabel = data.Field(sequential=False, use_vocab=False)
+    abstract_data = data.TabularDataset(path='./data/abstract_tsv.tsv', skip_header=True, format='tsv',
+                                        fields=[('abstract', abstract), ('label', fakelabel)])
+
+    abstract.build_vocab(abstract_data)
+    get_abs = convert_csv_to_dict("./data/abstracts_final.csv")
+
+    for j in range(numofval):
+
+        features, labels = test_set.__getitem__(j)
+        absfeatures = []
+        for l in nameindex:
+            absfeatures.append(sentence_preprocess_rnn(get_abs[features[l]], abstract.vocab).cuda())
+        for k in range(50):
+            if k not in nameindex:
+                absfeatures.append(torch.tensor(float(features[k])).cuda())
+        predict = model(absfeatures)
+        conf_mat, cor = confusion_matrix(conf_mat, predict, torch.tensor([labels.astype(float)]).cuda())
+        testcorr += cor
+    print(conf_mat)
+    print(testcorr/numofval)
+
+    # Confusion Matrix:
+    # [[212, 24, 1, 7],
+    #  [33, 240, 4, 4],
+    #  [7, 65, 119, 19],
+    #  [26, 38, 39, 173]]
+    #
+    # 0.7359050445103857
+
+    # [[177, 49, 0, 25],
+    #  [83, 74, 4, 42],
+    #  [19, 30, 1, 21],
+    #  [14, 23, 0, 26]]
+    #
+    #  0.47278911564625853
 
 
 
+
+def confusion_matrix(matrix, prediction, label):
+    mat = matrix
+    pred = prediction.argmax()
+    lab = label.argmax()
+    mat[lab][pred] += 1
+    if lab == pred:
+        yes = 1
+    else:
+        yes = 0
+    return mat, yes
 
 
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--lr', type=float, default=0.01)
     parser.add_argument('--epochs', type=int, default=25)
-    parser.add_argument('--model', type=str, default='baseline',
-                        help="Model type: baseline,rnn,cnn (Default: baseline)")
+    # parser.add_argument('--model', type=str, default='baseline',
+    #                     help="Model type: baseline,rnn,cnn (Default: baseline)")
     parser.add_argument('--emb_dim', type=int, default=100)
     parser.add_argument('--rnn_hidden_dim', type=int, default=50)
-    parser.add_argument('--num_filt', type=int, default=50)
+    # parser.add_argument('--num_filt', type=int, default=50)
 
     args = parser.parse_args()
 
     main(args)
+    # run_test()

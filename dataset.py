@@ -20,6 +20,6 @@ class HoursDataset(data.Dataset):
 
         thisentry = self.hours[index]
         temp = thisentry.flatten()
-        lab = temp[-1]
-        feat = np.delete(temp, -1)
+        lab = temp[-4:] #temp[-1]
+        feat = temp[:-4]
         return feat, lab
