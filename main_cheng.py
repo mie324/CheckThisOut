@@ -18,6 +18,7 @@ from sklearn.model_selection import train_test_split
 from model import *
 import math
 from process_data_cheng import *
+from evaluate_model_cnn import *
 
 spacy_en = spacy.load('en')
 
@@ -227,6 +228,22 @@ def sentence_preprocess_cnn(sentence,Vocab,embeds):
     ans=Variable(sentence.float())
     return ans
 
+def convert_hour_to_onehot(list):
+    ans=[]
+    for i in range(len(list)):
+        temp=[0,0,0,0]
+        if list[i]<10:
+            temp[0]=1
+        if list[i]>=10 and list[i]<35:
+            temp[1]=1
+        if list[i]>=35 and list[i]<85:
+            temp[2]=1
+        if list[i]>=85:
+            temp[3]=1
+        for j in range(len(temp)):
+            ans.append(temp[j])
+    return ans
+
 
 def convert_data_cnn(data,Vocab,embeds,dictionary):
     # this function take in a data point, and convert the data point into
@@ -234,39 +251,57 @@ def convert_data_cnn(data,Vocab,embeds,dictionary):
     sentence_list=[]
     for i in range(len(data)):
         tsentence=dictionary[data[i][0]]
+        #print(tsentence)
         tsentence=sentence_preprocess_cnn(tsentence,Vocab,embeds)
         sentence_list.append(tsentence)
     hour_list=[]
     for i in range(10):
         hour_list.append(float(data[i][1]))
-    hour_list=Variable(torch.tensor(hour_list).float())
-    label=Variable(torch.tensor(float(data[-1][1])).float())
+    hour_list=convert_hour_to_onehot(hour_list)
+    hour_list=Variable(torch.tensor([hour_list]).float())
+    label=Variable(torch.tensor(convert_hour_to_onehot([float(data[-1][1])])).float())
     return sentence_list,hour_list,label
 
-def check_in_diction(dictionary,data):
-    count=0
-    for i in range(len(data)):
-        if data[i][0] in dictionary.keys():
-            count+=1
-    if count==11:
-        return True
-    if count!=11:
-        return False
+#def check_in_diction(dictionary,data):
+    #count=0
+    #for i in range(len(data)):
+        #if data[i][0] in dictionary.keys():
+            #count+=1
+    #if count==11:
+        #return True
+    #if count!=11:
+        #return False
 
-def correctness_cnn(prediction,label,range):
-    lower=label-range
-    higher=label+range
-    if prediction<=higher and prediction>=lower:
+#def correctness_cnn(prediction,label,range):
+    #lower=label-range
+    #higher=label+range
+    #if prediction<=higher and prediction>=lower:
+        #return 1
+    #else:
+        #return 0
+def correctness_cnn(prediction,label):
+    max=0
+    max_position=0
+    one_position=0
+    for i in range(len(prediction)):
+        if prediction[i]>max:
+            max=prediction[i]
+            max_position=i
+        if label[i]==1:
+            one_position=i
+    if max_position==one_position:
         return 1
-    else:
+    if max_position!=one_position:
         return 0
+
+#dddd
 
 def run_cnn_complete_version():
 
-    learning_rate=0.0001
-    batch_size=50
-    epoch=2
-    tollerancec=10
+    learning_rate=0.005
+    batch_size=6
+    epoch=3
+    #tollerancec=infinity
 
 
     print('program start')
@@ -289,7 +324,7 @@ def run_cnn_complete_version():
 
     net=full_cnn()
     optimizer=torch.optim.RMSprop(net.parameters(),lr=learning_rate)
-    loss_func=torch.nn.MSELoss()
+    loss_func=torch.nn.BCELoss()
 
     for epoch_num in range(epoch):
         count=0
@@ -305,7 +340,9 @@ def run_cnn_complete_version():
                 #print(prediction,label)
                 loss_in_batch+=loss
                 count_in_batch+=1
-                accuracy_in_batch+=correctness_cnn(prediction,label,tollerancec)
+                #print(prediction)
+                #print(label)
+                accuracy_in_batch+=correctness_cnn(prediction,label)
 
                 #print('current batch:'+str(batch_num)+', k:'+str(k))
             loss_in_batch=loss_in_batch/count_in_batch
@@ -315,9 +352,27 @@ def run_cnn_complete_version():
             loss_in_batch.backward()
             optimizer.step()
 
-            #count+=1
+            count+=1
             #if count%20==0:
             print('epoch:'+str(epoch_num)+', batch:'+str(batch_num)+', loss:'+str(loss_in_batch)+', accuraccy:'+str(accuracy_in_batch))
+            if count%30==0:
+                validation_accuracy=0
+                validation_loss=0
+                amount_of_val=100
+                for i in range(amount_of_val):
+                    temp_abstract,temp_hour,temp_label=convert_data_cnn(validation_data[i],Vocab,embeds,abstract_dictionary)
+                    temp_prediction=net.forward(temp_abstract,temp_hour)
+                    temp_loss=loss_func(temp_prediction,temp_label)
+                    validation_loss+=temp_loss
+                    validation_accuracy+=correctness_cnn(temp_prediction,temp_label)
+
+                validation_accuracy=validation_accuracy/amount_of_val
+                validation_loss=validation_loss/amount_of_val
+                print('\n')
+                print('validation loss is: '+str(validation_loss)+', validation accuracy is: '+str(validation_accuracy))
+                print('\n')
+        torch.save(net,'./models/cnn_model_epoch'+str(epoch_num)+'.pkl')
+        print('model saved')
 
 
 
@@ -330,7 +385,26 @@ if __name__=='__main__':
     #run_fullyconnect_complete_version()
     #run_cnn_complete_version()
     #ans=convert_csv_to_dict('./data/abstracts_final.csv')
-    run_cnn_complete_version()
+    #run_cnn_complete_version()
+    #balance_data()
+    #find_accuracy()
+    #find_confusion_matrix()
+    #array=np.asarray([1,9,1,4])
+    #ans=array.argmax()
+    #find_confusion_matrix()
+    #cnn_user_interface()
+    #print_sample_data()
+    test_for_interface()
+
+
+
+
+
+
+
+
+
+
 
 
 
